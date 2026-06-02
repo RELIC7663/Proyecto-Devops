@@ -12,10 +12,10 @@ permissions:
 
 jobs:
   # =================================================================
-  # JOB 1: VALIDACIÓN Y CALIDAD
+  # JOB 1: VALIDACIÓN, SEGURIDAD Y COBERTURA
   # =================================================================
   ci:
-    name: Build, Security and Quality Analysis
+    name: Build, Test, SAST, SCA & Coverage
     runs-on: ubuntu-latest
 
     steps:
@@ -30,7 +30,14 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    #  ESTE ES EL BLOQUE NUEVO QUE SACAMOS DE LA PÁGINA:
+    - name: Cache Maven packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('app/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
     - name: Cache SonarCloud packages
       uses: actions/cache@v4
       with:
@@ -38,42 +45,43 @@ jobs:
         key: ${{ runner.os }}-sonar
         restore-keys: ${{ runner.os }}-sonar
 
-    - name: Cache Maven packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-maven-
-
-    - name: SonarCloud Analysis
+    # Build, test, generación de informe JaCoCo y análisis SonarCloud
+    - name: Maven Build, Test, JaCoCo & SonarCloud
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: |
-        ./mvnw clean verify sonar:sonar \
+        mvn clean verify sonar:sonar \
           -Dsonar.host.url=https://sonarcloud.io \
           -Dsonar.organization=relic7663 \
           -Dsonar.projectKey=RELIC7663_Proyecto-Devops \
           -Dsonar.branch.name=${{ github.ref_name }} \
           -Dsonar.qualitygate.wait=true
+      working-directory: app                       # ← AQUÍ LA CORRECCIÓN CLAVE
 
-    - name: Trivy FS Scan (Security)
+    # Verificar explícitamente la cobertura ≥80% con JaCoCo
+    - name: Check JaCoCo Coverage ≥80%
+      run: |
+        COVERAGE=$(grep -oP 'Total.*?ctr2">\K[0-9]+' app/target/site/jacoco/index.html | head -1)
+        echo "Cobertura total: ${COVERAGE}%"
+        if [ "${COVERAGE}" -lt 80 ]; then
+          echo "ERROR: cobertura por debajo del 80% (${COVERAGE}%)"
+          exit 1
+        fi
+      shell: bash
+
+    # Escaneo de vulnerabilidades en el sistema de archivos (app/)
+    - name: Trivy FS Scan
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: 'fs'
-        scan-ref: '.'
+        scan-ref: 'app'                           # ← escanea solo la app
         format: 'table'
         exit-code: '0'
-        severity: 'CRITICAL,HIGH' 
+        severity: 'CRITICAL,HIGH'
 
-    - name: Upload JAR as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-jar
-        path: target/*.jar
   # =================================================================
-  # JOB 2: EMPAQUETADO DOCKER
+  # JOB 2: CONSTRUIR Y PUBLICAR IMAGEN DOCKER (MULTI‑STAGE)
   # =================================================================
   docker:
     name: Build and Push Docker Image
@@ -84,12 +92,6 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Download JAR artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: app-jar
-        path: target/
-
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
@@ -98,12 +100,14 @@ jobs:
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }} 
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    # Construye la imagen usando el Dockerfile multi‑stage de app/
     - name: Build and Push Docker Image
       uses: docker/build-push-action@v5
       with:
-        context: .
-        file: ./Dockerfile
+        context: app                              # ← el contexto es la carpeta app
+        file: app/Dockerfile                      # ← ruta exacta del Dockerfile
         push: true
         tags: |
           ghcr.io/relic7663/spring-petclinic-devops:${{ github.sha }}
