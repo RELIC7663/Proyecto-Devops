@@ -54,7 +54,7 @@ jobs:
         ./mvnw clean verify sonar:sonar \
           -Dsonar.host.url=https://sonarcloud.io \
           -Dsonar.organization=relic7663 \
-          -Dsonar.projectKey=RELIC7663_spring-petclinic \
+          -Dsonar.projectKey=RELIC7663_Proyecto-Devops \
           -Dsonar.branch.name=${{ github.ref_name }} \
           -Dsonar.qualitygate.wait=true
 
