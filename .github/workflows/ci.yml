@@ -90,7 +90,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-      
+
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
@@ -114,4 +114,7 @@ jobs:
         push: true
         tags: |
           ghcr.io/relic7663/spring-petclinic-devops:${{ github.sha }}
-          ghcr.io/relic7663/spring-petclinic-devops:latest
+          ghcr.io/relic7663/spring-petclinic-devops:latest  
+
+
+    
