@@ -1,3 +1,48 @@
-﻿apiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
-... (todo el contenido)
+metadata:
+  name: spring-petclinic
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: spring-petclinic
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: spring-petclinic
+    spec:
+      containers:
+      - name: spring-petclinic
+        image: ghcr.io/relic7663/spring-petclinic-devops:latest
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: spring-petclinic-config
+        - secretRef:
+            name: spring-petclinic-secret
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 768Mi
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 15
