@@ -1,3 +1,0 @@
-# Trivy ignore rules
-# Add CVE IDs here to suppress known false positives or accepted risks
-# Format: CVE-YYYY-NNNNN

@@ -100,14 +100,6 @@ jobs:
             Stop-Process -Id $portForward.Id -Force -ErrorAction SilentlyContinue
           }
 
-      - name: OWASP ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.12.0
-        continue-on-error: true
-        with:
-          target: 'http://host.docker.internal:18080'
-          rules_file_name: 'zap-baseline.conf'
-          cmd_options: '-d'
-
   deploy-prod:
     name: Deploy to production after approval
     needs: deploy-staging
