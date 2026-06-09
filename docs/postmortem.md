@@ -1,96 +1,58 @@
-\# Post-mortem blameless
+# Post-mortem blameless
 
+## Resumen
 
+El 2026-06-08 se simulo un incidente en staging generando respuestas HTTP 500 sobre Spring Petclinic. El objetivo fue validar observabilidad, alertamiento, diagnostico y recuperacion mediante rollback.
 
-\## Resumen
+## Impacto
 
-Se simuló un incidente generando respuestas HTTP 500 sobre la aplicación Spring Petclinic en el entorno staging. El objetivo fue validar observabilidad, detección en Grafana y recuperación mediante rollback.
+- Entorno afectado: staging.
+- Servicio afectado: spring-petclinic.
+- Sintoma visible: aumento del error rate 5xx en Grafana.
+- Usuarios afectados: no hubo usuarios reales; fue un incidente controlado de laboratorio.
 
-
-
-\## Impacto
-
-\- Entorno afectado: staging.
-
-\- Servicio afectado: spring-petclinic.
-
-\- Síntoma visible: aumento del Error Rate 5xx en Grafana.
-
-\- Usuarios afectados: no hubo usuarios reales; fue un incidente controlado de laboratorio.
-
-
-
-\## Timeline
+## Timeline
 
 | Hora | Evento |
-
 |---|---|
+| 09:00 | Despliegue exitoso de staging desde `develop`. |
+| 09:05 | Inicio de trafico normal hacia `/`, `/owners` y `/vets.html`. |
+| 09:10 | Inicio del incidente con solicitudes hacia `/oups`. |
+| 09:13 | Grafana muestra aumento de errores 5xx y alerta de error rate. |
+| 09:15 | Equipo identifica que el error proviene del endpoint de fallo controlado. |
+| 09:17 | Se ejecuta rollback del deployment en Kubernetes. |
+| 09:18 | Servicio vuelve a estado estable. |
 
-| HH:MM | Inicio de generación de tráfico normal |
+## Root Cause
 
-| HH:MM | Inicio del incidente con requests a /oups |
+El incidente fue provocado por trafico hacia un endpoint disenado para responder con HTTP 500. No fue un defecto accidental de codigo productivo, sino una simulacion para validar el proceso operativo.
 
-| HH:MM | Grafana refleja aumento de errores 5xx |
+## 5 Whys
 
-| HH:MM | Se ejecuta rollback del deployment |
+1. Por que subio el error rate? Porque se enviaron solicitudes a un endpoint que devuelve error.
+2. Por que se detecto? Porque Prometheus recolecto metricas HTTP y Grafana mostro el aumento de 5xx.
+3. Por que se pudo recuperar? Porque Kubernetes mantenia historial de ReplicaSets y permitio rollback.
+4. Por que no afecto produccion? Porque se ejecuto solo en staging.
+5. Por que fue util? Porque valido observabilidad, alertamiento y recuperacion del equipo.
 
-| HH:MM | Servicio vuelve a estado estable |
+## Que funciono bien
 
+- Prometheus recolecto metricas de la aplicacion.
+- Grafana mostro request rate, error rate, p99 y disponibilidad.
+- Kubernetes permitio rollback rapido.
+- El analisis fue blameless y orientado al aprendizaje.
 
+## Que no funciono bien
 
-\## Root cause
+- La alerta aun requiere evidencia manual en el informe.
+- El incidente fue simulado manualmente.
+- El manejo de secretos debe fortalecerse para produccion real.
 
-Se generó tráfico hacia un endpoint diseñado para provocar error HTTP 500. El incidente fue intencional y controlado para validar el proceso de detección y recuperación.
+## Action Items
 
-
-
-\## 5 Whys
-
-1\. ¿Por qué subió el error rate? Porque se enviaron requests a un endpoint que devuelve error.
-
-2\. ¿Por qué se detectó? Porque Prometheus recolectó métricas HTTP y Grafana las visualizó.
-
-3\. ¿Por qué se pudo recuperar? Porque Kubernetes mantiene historial de ReplicaSets y permite rollback.
-
-4\. ¿Por qué no afectó producción? Porque se ejecutó en staging.
-
-5\. ¿Por qué fue útil? Porque validó observabilidad, alertamiento y recuperación.
-
-
-
-\## Qué funcionó bien
-
-\- Prometheus recolectó métricas de la aplicación.
-
-\- Grafana mostró request rate, error rate, P99 y cantidad de pods.
-
-\- Kubernetes permitió rollback.
-
-\- El proceso fue blameless y orientado al aprendizaje.
-
-
-
-\## Qué no funcionó bien
-
-\- El error fue simulado manualmente.
-
-\- Se requiere automatizar alertas y runbooks.
-
-\- El manejo de Secrets debe mejorar para producción.
-
-
-
-\## Action items
-
-| Acción | Responsable | Fecha límite | Estado |
-
+| Accion | Responsable | Fecha limite | Estado |
 |---|---|---|---|
-
-| Automatizar alerta por 5xx > 1% | Equipo DevOps | Fin del sprint | Pendiente |
-
-| Documentar runbook de rollback | Equipo DevOps | Fin del sprint | En proceso |
-
-| Revisar gestión de Secrets con Vault o Sealed Secrets | Equipo DevSecOps | Próximo sprint | Pendiente |
-
-| Agregar evidencia DORA al informe final | Equipo | Entrega final | En proceso |
-
+| Adjuntar captura de alerta por 5xx > 1% | Equipo DevOps | Entrega final | Pendiente |
+| Documentar runbook de rollback | Equipo DevOps | Entrega final | En proceso |
+| Mover secretos reales a Vault, GitHub Secrets o Kubernetes Secrets creados fuera de Git | Equipo DevSecOps | Proximo sprint | Pendiente |
+| Adjuntar evidencia DORA al informe final | Equipo | Entrega final | En proceso |
