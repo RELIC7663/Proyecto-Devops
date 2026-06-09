@@ -1,0 +1,13 @@
+actions-runner/
+app/target/
+app/.gradle/
+app/build/
+app/out/
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+hs_err_pid*
+.env
+*.env
+*.log

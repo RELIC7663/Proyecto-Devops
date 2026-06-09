@@ -17,16 +17,25 @@ spec:
       labels:
         app: spring-petclinic
     spec:
+      securityContext:
+        runAsNonRoot: true
       containers:
       - name: spring-petclinic
         image: ghcr.io/relic7663/spring-petclinic-devops:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
+          name: http
         envFrom:
         - configMapRef:
             name: spring-petclinic-config
         - secretRef:
             name: spring-petclinic-secret
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         resources:
           requests:
             cpu: 250m

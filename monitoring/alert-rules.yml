@@ -1,0 +1,38 @@
+groups:
+  - name: spring-petclinic-slo
+    rules:
+      - alert: PetclinicDown
+        expr: up{job=~"spring-petclinic.*"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Spring Petclinic target is down"
+          description: "Prometheus cannot scrape {{ $labels.instance }} for more than 2 minutes."
+
+      - alert: PetclinicHighErrorRate
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(http_server_requests_seconds_count[5m])), 1)
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spring Petclinic 5xx error rate is above 1%"
+          description: "The 5xx error ratio has been above the SLO threshold for 5 minutes."
+
+      - alert: PetclinicHighP99Latency
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(http_server_requests_seconds_bucket[5m])) by (le)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spring Petclinic p99 latency is above 1s"
+          description: "The p99 latency has exceeded the workshop SLO threshold."

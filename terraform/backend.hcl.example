@@ -1,0 +1,5 @@
+bucket         = "petclinic-devops-tfstate"
+key            = "spring-petclinic/devops/terraform.tfstate"
+region         = "us-east-1"
+dynamodb_table = "petclinic-devops-tf-locks"
+encrypt        = true

@@ -64,6 +64,7 @@ jobs:
           kubectl apply -f k8s/service.yaml -n staging
           kubectl apply -f k8s/hpa.yaml -n staging
           kubectl apply -f k8s/pdb.yaml -n staging
+          kubectl apply -f k8s/ingress-staging.yaml
 
           kubectl set image deployment/spring-petclinic `
             spring-petclinic=ghcr.io/relic7663/spring-petclinic-devops:$env:IMAGE_TAG `
@@ -72,7 +73,7 @@ jobs:
           kubectl rollout status deployment/spring-petclinic `
             -n staging --timeout=240s
 
-          kubectl get pods,svc,hpa,pdb -n staging
+          kubectl get pods,svc,hpa,pdb,ingress -n staging
 
       - name: Smoke test staging
         shell: powershell
@@ -140,6 +141,7 @@ jobs:
           kubectl apply -f k8s/service.yaml -n prod
           kubectl apply -f k8s/hpa.yaml -n prod
           kubectl apply -f k8s/pdb.yaml -n prod
+          kubectl apply -f k8s/ingress-prod.yaml
 
           kubectl set image deployment/spring-petclinic `
             spring-petclinic=ghcr.io/relic7663/spring-petclinic-devops:$env:IMAGE_TAG `
@@ -148,4 +150,4 @@ jobs:
           kubectl rollout status deployment/spring-petclinic `
             -n prod --timeout=240s
 
-          kubectl get pods,svc,hpa,pdb -n prod
+          kubectl get pods,svc,hpa,pdb,ingress -n prod
